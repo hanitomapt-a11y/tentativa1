@@ -22,15 +22,7 @@ app.get("/", (req, res) => {
 
 app.post("/enviar-orcamento", async (req, res) => {
   try {
-    const {
-      email,
-      largura,
-      altura,
-      area,
-      preco,
-      pdfBase64,
-      nomeFicheiro
-    } = req.body;
+    const { email, largura, altura, area, preco, pdfBase64, nomeFicheiro } = req.body;
 
     if (!email || !largura || !altura || !pdfBase64) {
       return res.status(400).json({
@@ -45,7 +37,11 @@ app.post("/enviar-orcamento", async (req, res) => {
       });
     }
 
-    const pdfBuffer = Buffer.from(pdfBase64, "base64");
+    console.log("SMTP_HOST:", process.env.SMTP_HOST);
+    console.log("SMTP_PORT:", process.env.SMTP_PORT);
+    console.log("SMTP_USER:", process.env.SMTP_USER);
+    console.log("SMTP_FROM:", process.env.SMTP_FROM);
+    console.log("SMTP_PASS exists:", !!process.env.SMTP_PASS);
 
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -58,6 +54,7 @@ app.post("/enviar-orcamento", async (req, res) => {
     });
 
     await transporter.verify();
+    console.log("SMTP ligado com sucesso");
 
     await transporter.sendMail({
       from: `"Guia Lar" <${process.env.SMTP_FROM}>`,
@@ -75,21 +72,24 @@ app.post("/enviar-orcamento", async (req, res) => {
       attachments: [
         {
           filename: nomeFicheiro || "orcamento-guia-lar.pdf",
-          content: pdfBuffer,
+          content: Buffer.from(pdfBase64, "base64"),
           contentType: "application/pdf"
         }
       ]
     });
+
+    console.log("Email enviado com sucesso para:", email);
 
     return res.json({
       mensagem: "PDF gerado e enviado com sucesso para o seu email."
     });
 
   } catch (error) {
-    console.error("Erro ao enviar orçamento:", error);
+    console.error("ERRO COMPLETO AO ENVIAR EMAIL:");
+    console.error(error);
 
     return res.status(500).json({
-      mensagem: "Erro ao enviar o email."
+      mensagem: error.message || "Erro ao enviar o email."
     });
   }
 });
